@@ -1,0 +1,111 @@
+---
+title: "Wrangling Missing Data"
+author: "Lucas Mendicino"
+date: "3/3/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(naniar)
+```
+
+
+
+# Wrangling Missing Values
+
+Ideally, a dataset would have NA for all missing values, but that is rarely the case. One must search for all missing values and replace them with NA.
+
+Let's conduct this with the pacman dataset. 
+
+```{r}
+pacman <- read_csv("~/Desktop/pacman.txt")
+pacman <- pacman %>% select(year, initial, score)
+head(pacman)
+```
+
+
+The pacman dataset has pacman scores and we will focus on three columns: year, initial, and score
+
+Let's use miss_scan_count to search for strange missing values of the form ("N/A", "missing", "na", " ")
+
+We can do it indivudally like this:
+```{r}
+miss_scan_count(data = pacman, search = list("N/A"))
+miss_scan_count(data = pacman, search = list("missing"))
+miss_scan_count(data = pacman, search = list("na"))
+miss_scan_count(data = pacman, search = list(" "))
+```
+
+Or all together:
+```{r}
+miss_scan_count(data = pacman, search = list("N/A", "missing","na", " "))
+```
+
+We can replace these values with NA using replace_with_na() and test again.
+
+```{r}
+pacman_clean <- replace_with_na(pacman, replace = list(year = c("N/A", "na", "missing"),
+                                score = c("N/A", "na", "missing")))
+                                        
+miss_scan_count(pacman_clean, search = list("N/A", "na", "missing"))
+```
+
+We can also use the following functions on scoped variants. First, we just look at year using replace_with_na_at(), then only character variables using replace_with_na_if(), and finally all variables using replace_with_na_all().
+
+```{r}
+replace_with_na_at(pacman,
+                   .vars = c("year"), 
+                   ~.x %in% c("N/A", "missing", "na", " "))
+
+replace_with_na_if(pacman,
+                   .predicate = is.character, 
+                   ~.x %in% c("N/A", "missing", "na", " "))
+
+replace_with_na_all(pacman, ~.x %in% c("N/A", "missing", "na", " "))
+```
+
+
+## Handling implicit missing values
+
+Sometimes a dataset has missing missing values, and it is implied that it is missing by its absence.
+
+Let's explore this scenario using the frogger dataset, it contains scores for four players at four different times throughout the day.
+
+```{r}
+frogger <- read_csv("~/Desktop/Frogger.csv")
+frogger <- frogger %>% select(name, time, value)
+print(frogger)
+```
+We can see that andy, nic, and dan do not have four scores, they are missing scores from parts of the day and it is implied becuase they are not there.
+
+
+Let's use functions from tidyr to fix implicit missing values.
+
+
+complete() function makes implicit missing values explicit
+```{r}
+frogger_tidy <- frogger %>% complete(time, name)
+print(frogger_tidy)
+```
+
+
+We can also use fill() to fill down the name variable in the dataset. It uses last observation carried down and only works for a specific structure.
+
+```{r}
+frogger_tidy %>% fill(name)
+print(frogger_tidy)
+```
+Now, we see explicit missing values for andy, nic, and dan.
+
+We can use fill() and complete() together
+
+```{r}
+frogger %>%
+  fill(name) %>%
+  complete(name, time)
+```
