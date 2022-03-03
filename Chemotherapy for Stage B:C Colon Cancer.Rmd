@@ -1,0 +1,102 @@
+---
+title: "Chemotherapy for Stage B/C Colon Cancer"
+author: "Lucas Mendicino"
+date: "3/3/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(finalfit)
+library(naniar)
+```
+
+
+In this project, I will explore the colon_s dataset from the finalfit package. It contains data from one of the first successful trials of adjuvant chemotherapy for colon cancer. Levamisole is a low-toxicity compound previously used to treat worm infestations in animals; 5-FU is a moderately toxic (as these things go) chemotherapy agent. There are two records per person, one for recurrence and one for death.
+
+
+```{r}
+head(colon_s)
+```
+# Setup
+
+The goal is to explore the association between a cancer obstructing the bowel and 5-year survival, accounting for other patient and disease factors.
+
+In order to demonstrate how to deal with missing data, I will create random MCAR and MAR smoking variables in the dataset.
+
+Recall that MCAR are values that are randomly missing from the dataset. They do not related to any other data in the dataset and there is no pattern to the actual values of the missing values. For example, smoking status not recorded in a random subset of patients.
+
+MAR does have a relationship with other variables in the dataset and the values are missing at random. For example, smoking status is not documented in male patients because the doctor did not ask.
+
+
+Let's create some missing data:
+
+```{r}
+set.seed(42)
+
+# Smoking missing completely at random
+colon_s$smoking_mcar = 
+  sample(c("Smoker", "Non-smoker", NA), 
+    dim(colon_s)[1], replace=TRUE, 
+    prob = c(0.2, 0.7, 0.1)) %>% 
+  factor() %>% 
+    ff_label("Smoking (MCAR)")
+
+# Smoking missing conditional on patient sex
+colon_s$smoking_mar[colon_s$sex.factor == "Female"] = 
+  sample(c("Smoker", "Non-smoker", NA), 
+    sum(colon_s$sex.factor == "Female"), 
+    replace = TRUE,
+    prob = c(0.1, 0.5, 0.4))
+
+colon_s$smoking_mar[colon_s$sex.factor == "Male"] = 
+  sample(c("Smoker", "Non-smoker", NA), 
+    sum(colon_s$sex.factor == "Male"), 
+    replace=TRUE, prob = c(0.15, 0.75, 0.1))
+colon_s$smoking_mar = factor(colon_s$smoking_mar) %>% 
+    ff_label("Smoking (MAR)")
+```
+
+
+Let's examine with ff_glimpse to ensure the data is coded correctly. We need to ensure that factors and numerical variables are correctly assigned, know which variables have missing data, and ensure factor levels and variable labels are assigned correctly.
+
+```{r}
+explanatory = c("age", "sex.factor", 
+  "nodes", "obstruct.factor",  
+  "smoking_mcar", "smoking_mar")
+dependent = "mort_5yr"
+
+colon_s %>% 
+  ff_glimpse(dependent, explanatory)
+```
+
+
+# Identify Missing Values
+
+```{r}
+colon_df <- colon_s %>% select(c("mort_5yr", "age", "sex.factor", "nodes", "obstruct.factor", "smoking_mcar", "smoking_mar"))
+```
+
+
+```{r}
+vis_miss(colon_df)
+```
+
+```{r}
+vis_miss(colon_df, cluster = TRUE)
+```
+
+
+
+# Patterns of missingness
+
+```{r}
+colon_df %>% missing_pattern(dependent, explanatory)
+```
+We see 14 patterns of missingness in the data.
+
+
