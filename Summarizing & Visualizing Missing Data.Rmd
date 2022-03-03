@@ -1,0 +1,175 @@
+---
+title: "Summarizing & Visualizing Missing Data"
+author: "Lucas Mendicino"
+date: "3/3/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(naniar)
+library(datasets)
+library(visdat)
+
+```
+
+# Missing Values
+
+When dealing with real world data, we are dealing with missing data. Missing data can have unexpceted effects on analyses and bad imputation can lead to poor estimates.
+
+Missing values are values that should've been recorded but were not. They present as NA in are, meaning not available.
+
+We can check for missing values using the functions any_na(), are_na(), n_miss(), prop_miss(), and n_complete:
+
+Let's create a vector, x, with values NA, 1, 5, NA, 5, 6, NA, and explore its missing values
+
+```{r}
+x <- c(NA, 1, 5, NA, 5, 6, NA)
+
+any_na(x)
+are_na(x)
+n_miss(x)
+prop_miss(x)
+n_complete(x)
+```
+
+
+# Dataframe Summaries
+
+The above functions give very basic summaries of missingness.
+
+Let's look at the naniar package to explore dataframe summaries of missingness with the riskfactors dataset. The data is a subset of the 2009 survery from the Behavioral Risk Factor Surveillance System Survey, an ongoing data collection program designed to measure behavioral risk factors for the adult population (> 18 years old) living in households.
+
+```{r}
+head(riskfactors)
+```
+
+miss_var_summary() provides a summary for each variable of the number, percent missings, and cumulative sum of missings of the order of the variables. By default, it orders by the most missings in each variable.
+
+```{r}
+miss_var_summary(riskfactors)
+```
+We see variables pregnant, smoke_stop, smoke_last, drink_average, drink_days, smoke_days, and health_poor have a large amount of missing values. The rest of the variables have less than 5% missing.
+
+
+miss_case_summary() provides a summary for each case in the data of the number, percent missings, and cumulative sum of missings of the order of the variables. By default, it orders by the most missings in each variable.
+
+
+```{r}
+miss_case_summary(riskfactors)
+```
+
+Let's use a group by statement to create missingness summaries for each variable and case by health_general (Answer to question "in general your health is" with levels Excellent VeryGood Good Fair Poor Refused)
+
+
+```{r}
+riskfactors %>% group_by(health_general) %>% miss_var_summary()
+
+riskfactors %>% group_by(health_general) %>% miss_case_summary()
+```
+
+
+Another way to summarize missingness in each case and variable is to use miss_var_table() and miss_case_table() to get the number of times that there are 0, 1, 2, 3,... missings in a variable or case.
+
+```{r}
+miss_var_table(riskfactors)
+miss_case_table(riskfactors)
+```
+
+Let's also tabulate the missingness grouped by month.
+```{r}
+riskfactors %>% group_by(health_general) %>% miss_var_table()
+
+riskfactors %>% group_by(health_general) %>% miss_case_table()
+```
+
+
+miss_var_span() and miss_var_run() are useful to explore missingness in time series data. miss_var_span() calculates the number of missing values in a variable for a repeating scan and miss_var_run() calculates the number of steaks of missingness. Let's show this with the pedestrian dataset. This dataset contains hourly counts of pedestrians from 4 sensors around Melbourne: Birrarung Marr, Bourke Street Mall, Flagstaff station, and Spencer St-Collins St (south), recorded from January 1st 2016 at 00:00:00 to December 31st 2016 at 23:00:00.
+
+```{r}
+head(pedestrian)
+```
+
+Let's calculate the summaries of each run of missingness for hourly_counts and for each span of missingness, for a span of 4000, for hourly_counts
+```{r}
+miss_var_run(pedestrian, var = hourly_counts)
+miss_var_span(pedestrian, var = hourly_counts, span_every = 4000)
+```
+
+And for each month, calculate the run of missingness in hourly_counts, and for each month calulcate the span of missingness of a span of 200 for hourly_counts
+
+```{r}
+pedestrian %>% group_by(month) %>% miss_var_run(var = hourly_counts)
+pedestrian %>% group_by(month) %>% miss_var_span(var = hourly_counts, span_every = 2000)
+```
+
+
+# Visualizations
+Numerical summaries of missingness are useful, but a visualization can quickly capture the idea. Let's explore functions of the visdat package.
+
+Let's visualize all of the missingness using vis_miss(). It provides an at-a-glance ggplot of the missingness inside a dataframe, colouring cells according to missingness, where black indicates a missing cell and grey indicates a present cell. As it returns a ggplot object, it is very easy to customize and change labels.
+
+```{r}
+vis_miss(riskfactors)
+```
+
+We can cluster all of the missingness and sort it as well
+```{r}
+vis_miss(riskfactors, cluster = TRUE)
+
+vis_miss(riskfactors, sort = TRUE)
+```
+We see large clusters of missingness between some of the variables.
+
+
+Let's explore visualization functions from the naniar package.
+
+gg_miss_case() visualizes the number of missing cases.
+
+```{r}
+gg_miss_case(riskfactors)
+```
+
+We can also facet the plot by health_general.
+```{r}
+gg_miss_case(riskfactors, facet = health_general)
+```
+
+We can do the same visualizations on the variable level.
+
+```{r}
+gg_miss_var(riskfactors)
+gg_miss_var(riskfactors, facet = health_general)
+```
+
+We can explore patterns of missingness using gg_miss_upset(), which shows the number of missing values for each of the sets of data.
+
+```{r}
+gg_miss_upset(riskfactors)
+```
+
+We can also explore missingness changes across a variable using gg_miss_fct()
+
+```{r}
+gg_miss_fct(x = riskfactors, fct = health_general)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
