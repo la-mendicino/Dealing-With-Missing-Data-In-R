@@ -1,0 +1,43 @@
+---
+title: "Missing Data Dependence"
+author: "Lucas Mendicino"
+date: "3/3/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(naniar)
+library(visdat)
+```
+
+
+## Missing Data Dependence
+
+Missing data can be explored further by its relationship with randomness.
+
+Missing completely at random (MCAR) describes missingness that has no association with data you observed or unobserved. Imputation is advisable here. Deleting observations can reduce the sample size, limiting inference, but will not bias estimates.
+
+Missing at random (MAR) describes missingness depends on data you observed but not data unobserved. Deletion is not ideal here, and it is advisable to impute.
+
+Missing not at random (MNAR) describes missingness related to unobserved values related to assessment of interest. Data will be biased from imputation and deletion, and inference can be limited.
+
+
+Let's explore missingness dependence on the oceanbuoys dataset from the naniar package.
+```{r}
+head(oceanbuoys)
+```
+
+Let's use vis_miss to visualize the missingness and arrange by a few variables.
+```{r}
+oceanbuoys %>% arrange(year) %>% vis_miss()
+
+oceanbuoys %>% arrange(latitude) %>% vis_miss()
+
+oceanbuoys %>% arrange(wind_ew) %>% vis_miss()
+```
+When arranging by year, we see a definite clustering of missingness, which is a common symptom of MAR. We see this similarly with latitude. For wind_ew, it seems more MCAR. It can be said that the data is MAR; year and latitude are important for explaining missingness.
